@@ -1,0 +1,31 @@
+<style>
+  #charts {
+      background-color: #f8f9fa!important;
+  }
+  #dataSetSelectWrapper {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 10px;
+      background-color: #f8f9fa!important;
+      display: inline-block;
+  }
+  #dataSetSelectWrapper *, #dataSetSelectWrapperOther * {
+      display: inline-block;
+      margin: 0;
+  }
+  #dataSetSelectWrapper p, #dataSetSelectWrapperOther p {
+      margin-top: 10px;
+  }
+  #dataSetSelectWrapper, #dataSetSelectWrapperOther {
+      margin: 10px;
+  }
+</style>
+<div id="charts">
+<div id="metricVConfigCharts" style="width:100%; position:relative;">
+<div id="dataSetSelectWrapper" style=" z-index:1;"><p><label for="dataSetSelection">Y-axis</label><select name="dataSetSelection" id="dataSetSelection"></select></p></div>
+</div>
+<div id="metricVConfigOtherChart" style="width:100%; position:relative;">
+<h3>Custom Axes</h3>
+<div id="dataSetSelectWrapperOther" style=" z-index:1;"><p><label for="dataSetSelectionOtherConfig">X-axis</label><select name="dataSetSelectionOtherConfig" id="dataSetSelectionOtherConfig"></select></p><p><label for="dataSetSelectionOtherMetric">Y-axis</label><select name="dataSetSelectionOtherMetric" id="dataSetSelectionOtherMetric"></select></p></div>
+</div>
+</div>

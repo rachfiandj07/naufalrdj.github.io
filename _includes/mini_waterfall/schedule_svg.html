@@ -1,0 +1,276 @@
+<style>
+    #sprintTimelineWrapper {
+        position: relative;
+    }
+    #sprintTimelineWrapper svg, #timeCharts svg {
+        overflow: auto;
+    }
+    #ticketStacks ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    #ticketStacks li {
+        padding-left: 10px;
+    }
+    #ticketStacks {
+        font-size: small;
+        display: grid;
+        grid-template-columns: auto auto auto auto auto;
+        padding: 10px;
+        grid-column-gap: 10px;
+    }
+    #ticketStacks p.sectionTitle {
+        font-weight: 600;
+    }
+    #timeCharts {
+        background-color: #f8f9fa!important;
+    }
+    .graphAnnotation text {
+        font-size: small;
+        text-anchor: middle;
+        alignment-baseline: after-edge;
+    }
+    text.workerName {
+        font-size: medium;
+    }
+    .graphAnnotation, .focusCircleG {
+        pointer-events: none;
+    }
+    #dataSetSelectWrapper {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 10px;
+        background-color: #f8f9fa!important;
+        display: inline-block;
+    }
+    #dataSetSelectWrapper * {
+        display: inline-block;
+        margin: 0;
+    }
+    text.graphLegend {
+        alignment-baseline: before-edge;
+        font-size: small;
+    }
+    form#generationForm {
+        display:flex;
+        align-items: stretch;
+        flex-flow:row wrap;
+        justify-content: space-between;
+    }
+    form#generationForm > div {
+        display: flex;
+        width: 200px;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    form#generationForm > div > * {
+        display:block;
+    }
+    label, button {
+        position: relative;
+        font-size: medium;
+    }
+    label [role="tooltip"], button [role="tooltip"] {
+        font-size: small;
+        width: 240px;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -120px;
+        display: none;
+        background-color: black;
+        color: #fff;
+        text-align: center;
+        padding: 5px 5px;
+        border-radius: 6px;
+        position: absolute;
+        z-index: 1;
+    }
+    label:hover [role="tooltip"], button:hover [role="tooltip"] {
+        display: block;
+    }
+    [role="tooltip"]::after {
+        content: " ";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: black transparent transparent transparent;
+    }
+</style>
+<div id='generationFormWrapper'>
+<form id='generationForm'>
+<div>
+<div>
+<label for='sprintDayCount'><span class='mainLabelContent'>Days in sprint (min 5):</span><span role='tooltip'>How many business days are in each sprint.</span></label>
+</div>
+<div>
+<input id='sprintDayCount' name='sprintDayCount' type='number' min='5' value='10'>
+</div>
+</div>
+<div>
+<div>
+<label for='regressionTestDayCount'><span class='mainLabelContent'>Days for regression testing:</span><span role='tooltip'>How many days per sprint the testers will be doing regression tests, while programmers work on the next sprint.</span></label>
+</div>
+<div>
+<input id='regressionTestDayCount' name='regressionTestDayCount' type='number' value='2' min='1'>
+</div>
+</div>
+<div>
+<div>
+<label for='dayStartTime'><span class='mainLabelContent'>Day start hour (min 8):</span><span role='tooltip'>The hour of the day that work typically begins.</span></label>
+</div>
+<div>
+<input id='dayStartTime' name='dayStartTime' type='number' min='8' value='10' step="0.25">
+</div>
+</div>
+<div>
+<div>
+<label for='programmerCount'><span class='mainLabelContent'>Programmers (min 1):</span><span role='tooltip'>How many programmers are in this team.</span></label>
+</div>
+<div>
+<input id='programmerCount' name='programmerCount' type='number' min='1' value='5'>
+</div>
+</div>
+<div>
+<div>
+<label for='testerCount'><span class='mainLabelContent'>Testers (min 1):</span><span role='tooltip'>How many testers are in this team.</span></label>
+</div>
+<div>
+<input id='testerCount' name='testerCount' type='number' min='1' value='1'>
+</div>
+</div>
+<div>
+<div>
+<label for='maxInitialProgrammerWorkTimeInHours'><span class='mainLabelContent'>Peek programming time per ticket (in hours, min 1):</span><span role='tooltip'>The max number of hours you would expect it to take a programmer to finish their first iteration of a ticket's code changes before submitting it to code review.</span></label>
+</div>
+<div>
+<input id='maxInitialProgrammerWorkTimeInHours' name='maxInitialProgrammerWorkTimeInHours' type='number' min='1' value='16' step="0.25">
+</div>
+</div>
+<div>
+<div>
+<label for='maxFullRunTesterWorkTimeInHours'><span class='mainLabelContent'>Peek check time per ticket (in hours, min 1):</span><span role='tooltip'>The max number of hours you would expect it to take a tester to verify all of the functional requirements/acceptance criteria of a ticket.</span></label>
+</div>
+<div>
+<input id='maxFullRunTesterWorkTimeInHours' name='maxFullRunTesterWorkTimeInHours' type='number' min='1' value='8' step="0.25">
+</div>
+</div>
+<div>
+<div>
+<label for='maxQaAutomationTime'><span class='mainLabelContent'>Peek check automation time per ticket (in hours, min 1):</span><span role='tooltip'>The max number of hours you would expect it to take a tester to finish automating the checking of all of the functional requirements/acceptance criteria of a ticket.</span></label>
+</div>
+<div>
+<input id='maxQaAutomationTime' name='maxQaAutomationTime' type='number' min='1' value='8' step="0.25">
+</div>
+</div>
+<div>
+<div>
+<label for='averagePassBackCount'><span class='mainLabelContent'>Average pass back (min 0.5):</span><span role='tooltip'>On average, the number of times you would expect a tester to send a ticket back to a programmer because of a problem they found with the programmer's code changes.</span></label>
+</div>
+<div>
+<input id='averagePassBackCount' name='averagePassBackCount' type='number' min='0.5' value='1' step="0.5">
+</div>
+</div>
+<div>
+<div>
+<label for='checkRefinement'><span class='mainLabelContent'>Checking refinement percentage (min 0.0, max 0.99):</span><span role='tooltip'>How well the checking process can be refined for the checking of new behavior that wasn't automated this sprint, so that it can be performed in the next sprint's regression testing phase manually. For example, if the percentage is 75% and a ticket took 10 hours to check completely this sprint, it will take 2.5 hours to check manually next sprint. This will be used to project if/when there will be a deadlock. See the write-up for more details.</span></label>
+</div>
+<div>
+<input id='checkRefinement' name='checkRefinement' type='number' min='0.0' max='0.99' step='0.01' value='0.30'>
+</div>
+</div>
+<div>
+<div>
+<button type="submit">Go</button>
+</div>
+<div>
+<button type="button" id='previewButton'><span class='mainLabelContent'>Preview</span><span role='tooltip'>Preview the probability distributions that will be used when simulating the sprint.</span></button>
+</div>
+</div>
+</form>
+<div id='probabilityDistributionPreview' style='display: none;'>
+<button type='button' id='hidePreviewButton'>Hide Preview</button>
+<div>
+<p>Programming Time (hours)</p>
+<svg id='programmingPreview' height='200px' width='100%'><g><g class='previewYAxis'></g><g class='previewXAxis'></g></g></svg>
+</div>
+<div>
+<p>Checking Time (hours)</p>
+<svg id='checkingPreview' height='200px' width='100%'><g><g class='previewYAxis'></g><g class='previewXAxis'></g></g></svg>
+</div>
+<div>
+<p>Automation Time (hours)</p>
+<svg id='automationPreview' height='200px' width='100%'><g><g class='previewYAxis'></g><g class='previewXAxis'></g></g></svg>
+</div>
+</div>
+</div>
+<div id='sprintTimelineWrapper'><svg width="100%" height="300" id="sprintTimeline"></svg></div>
+<div id='sprintTimelineMinimapWrapper'><svg width="100%" height="75" id="sprintTimelineMinimap"></svg></div>
+<p id='deadlockProjection' class='sectionTitle'></p>
+<div id="timeCharts">
+<div id="dataSetSelectWrapper">
+<div id="playStopButtonDiv">
+<button>Play</button>
+</div>
+<p><select name="dataSetSelection" id="dataSetSelection"><option value="all">All workers</option><option value="0">Programmer #1</option><option value="1">Programmer #2</option><option value="2">Programmer #3</option><option value="3">Programmer #4</option><option value="4">Programmer #5</option><option value="5">Tester #1</option></select></p>
+</div>
+<div id="timeChartsWrapper"><p class="sectionTitle">Meetings</p>
+<svg width="100%" class="timeChartsSvg" id="meetingTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="meetingTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#meetingTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Context Switching</p>
+<svg width="100%" class="timeChartsSvg" id="contextSwitchingTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="contextSwitchingTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#contextSwitchingTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Productive Ticket Work</p>
+<svg width="100%" class="timeChartsSvg" id="productiveTicketWorkTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="productiveTicketWorkTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#productiveTicketWorkTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Redundant Ticket Work</p>
+<svg width="100%" class="timeChartsSvg" id="redundantTicketWorkTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="redundantTicketWorkTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#redundantTicketWorkTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Checking Tickets</p>
+<svg width="100%" class="timeChartsSvg" id="checkingTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="checkingTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#checkingTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Code Review</p>
+<svg width="100%" class="timeChartsSvg" id="codeReviewTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="codeReviewTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#codeReviewTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Regression Testing</p>
+<svg width="100%" class="timeChartsSvg" id="regressionTestingTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="regressionTestingTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#regressionTestingTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Nothing</p>
+<svg width="100%" class="timeChartsSvg" id="nothingTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="nothingTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#nothingTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Automation</p>
+<svg width="100%" class="timeChartsSvg" id="automationTimeChartSvg">
+<svg class="timeChartGraph" y="10" x="50" width="100%"><text class="workerName" x="10" y="20"></text><clipPath id="automationTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="chartPathsWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="100%" width="100%" x="0" y="0" class="mouseBox" clip-path="url(#automationTimeChartsClipPath)"></rect></g><g class="chartPaths"></g></g><g class="yAxis"></g><g class="focusCircleG"><circle stroke="black" r="8.5" class="graphAnnotationCircle" style="fill: none;"></circle></g><g class="graphAnnotation"></g>
+</svg>
+</svg>
+<p class="sectionTitle">Tickets in Stasis</p>
+<svg width="100%" class="timeChartsSvg" id="ticketStasisTimeChartSvg">
+<svg y="10" x="50" width="100%" class="timeChartGraph"><clipPath id="ticketStasisTimeChartsClipPath"><rect x="0" y="-10" height="100%"></rect></clipPath><g class="pathsGWrapper graphMouseTarget"><g class="backgroundRectWrapper"><rect opacity="0" height="200" width="647.333" x="0" y="0" class="mouseBox" clip-path="url(#ticketStasisTimeChartsClipPath)"></rect></g><g class="pathsG"></g></g><g class="xAxis" transform="translate(0,200)"></g><g class="yAxisStack"></g><g class="keysSvgs">
+<svg x="10" y="0.19966722129783676"><rect x="0" y="0" height="15" width="15" fill="#ffa600"></rect><text class="graphLegend" x="20" y="0"></text></svg>
+<svg x="10" y="20.16638935108153"><rect x="0" y="0" height="15" width="15" fill="#ff7c43"></rect><text class="graphLegend" x="20" y="0"></text></svg>
+<svg x="10" y="40.133111480865225"><rect x="0" y="0" height="15" width="15" fill="#f95d6a"></rect><text class="graphLegend" x="20" y="0"></text></svg>
+<svg x="10" y="60.09983361064892"><rect x="0" y="0" height="15" width="15" fill="#d45087"></rect><text class="graphLegend" x="20" y="0"></text></svg>
+<svg x="10" y="80.06655574043262"><rect x="0" y="0" height="15" width="15" fill="#a05195"></rect><text class="graphLegend" x="20" y="0"></text></svg>
+<svg x="10" y="100.0332778702163"><rect x="0" y="0" height="15" width="15" fill="#665191"></rect><text class="graphLegend" x="20" y="0"></text></svg></g><g class="focusCirclesG"></g><g class="graphAnnotation"></g></svg>
+</svg>
+</div>
+</div>
+<div id="ticketStacks"></div>

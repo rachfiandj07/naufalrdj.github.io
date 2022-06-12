@@ -1,0 +1,759 @@
+<script src="https://d3js.org/d3.v5.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<!-- <script src="https://d3js.org/d3-dsv.v2.min.js"></script>
+<script src="https://d3js.org/d3-fetch.v2.min.js"></script> -->
+
+<script type="module">
+  //   import {nest} from 'd3-collection';
+  // const maxWidth = +d3.select('#testerCountCharts').style("width").replace("px", "");
+  const margin = { top: 10, right: 30, bottom: 60, left: 80 },
+    height = 400;
+
+  const divWrapper = d3.select("#metricVConfigCharts");
+  const divOtherWrapper = d3.select("#metricVConfigOtherChart");
+  const {width, left: graphDivLeft, right: graphDivRight} = divWrapper.node().getBoundingClientRect();
+  const graphDivMiddleX = (graphDivLeft + graphDivRight) / 2;
+
+  const configKeysAndTitles = {
+    sprintDayCount: "Sprint Day Count",
+    regressionTestDayCount: "Regression Test Day Count",
+    dayStartTime: "Day Start Time",
+    programmerCount: "Programmer Count",
+    testerCount: "Tester Count",
+    maxInitialProgrammerWorkTimeInHours: "Max Initial Prog. Time (hours)",
+    maxFullRunTesterWorkTimeInHours: "Max Full Test Run Time (hours)",
+    maxQaAutomationTime: "Max QA Automation Time (hours)",
+    averagePassBackCount: "Average Pass Back Count",
+    checkRefinement: "Check Refinement",
+    programmerToTesterRatio: "Programmer To Tester Ratio",
+    peekProgTimeToPeekCheckTimeRatio: "Peek Prog Time To Peek Check Time Ratio",
+    peekCheckTimeToPeekAutomationTimeRatio: "Peek Check Time To Peek Automation Time Ratio",
+    peekProgTimeToPeekAutomationTimeRatio: "Peek Prog Time To Peek Automation Time Ratio",
+  }
+  const shownConfigKeys = [
+    "sprintDayCount",
+    "programmerCount",
+    "testerCount",
+    "programmerToTesterRatio",
+    "checkRefinement",
+    "regressionTestDayCount",
+    "maxInitialProgrammerWorkTimeInHours",
+    "maxFullRunTesterWorkTimeInHours",
+    "maxQaAutomationTime",
+    "averagePassBackCount",
+    "dayStartTime",
+  ]
+  const trackedMetricKeysAndTitles = {
+    growthRate: "Growth Rate (%)",
+    percentageOfSprintTicketsDone: "Sprint Tickets Done (%)",
+    percentageOfSprintTicketsAutomated: "Sprint Tickets Automated (%)",
+    percentageOfProgrammerTimeSpentProgramming: "Programmer Time Spent Programming (%)",
+    percentageOfProgrammingTimeForProductiveProgramming: "Programming Time For Productive Programming (%)",
+    percentageOfProgrammingTimeForRedundantProgramming: "Programming Time For Redundant Programming (%)",
+    percentageOfProgrammingTimeForFluffProgramming: "Programming Time For Fluff Programming (%)",
+    percentageOfProgrammingTimeForNonFluffProgramming: "Programming Time For Non Fluff Programming (%)",
+    percentageOfProgrammerTimeSpentCodeReview: "Programmer Time Spent Code Review (%)",
+    percentageOfCodeReviewTimeForProductiveCodeReview: "Code Review Time For Productive Code Review (%)",
+    percentageOfCodeReviewTimeForRedundantCodeReview: "Code Review Time For Redundant Code Review (%)",
+    percentageOfCodeReviewTimeForFluffCodeReview: "Code Review Time For Fluff Code Review (%)",
+    percentageOfCodeReviewTimeForNonFluffCodeReview: "Code Review Time For Non Fluff Code Review (%)",
+    percentageOfTesterTimeSpentChecking: "Tester Time Spent Checking (%)",
+    percentageOfTesterTimeSpentAutomating: "Tester Time Spent Automating (%)",
+    percentageOfTesterTimeSpentDoingNothing: "Tester Time Spent Doing Nothing (%)",
+    percentageOfCheckingTimeForProductiveChecking: "Checking Time For Productive Checking (%)",
+    percentageOfCheckingTimeForRedundantChecking: "Checking Time For Redundant Checking (%)",
+    percentageOfCheckingTimeForFluffChecking: "Checking Time For Fluff Checking (%)",
+    percentageOfCheckingTimeForNonFluffChecking: "Checking Time For Non Fluff Checking (%)",
+    projectedDeadlockAsSprintCount: "Projected Deadlock As Sprint Count",
+    projectedDeadlockAsNumberOfDays: "Projected Deadlock As Number Of Days",
+  }
+  const metricsThatMustBeScaledLogarithmically = [
+    "projectedDeadlockAsSprintCount",
+    "projectedDeadlockAsNumberOfDays",
+  ]
+  // const computedConfigComboKeyToCompFunc = {
+  //   programmerToTesterRatio: (row) => calculateRatio(parseFloat(row.programmerCount), parseFloat(row.testerCount)),
+  //   peekProgTimeToPeekCheckTimeRatio: (row) => calculateRatio(parseFloat(row.maxInitialProgrammerWorkTimeInHours), parseFloat(row.maxFullRunTesterWorkTimeInHours)),
+  //   peekCheckTimeToPeekAutomationTimeRatio: (row) => calculateRatio(parseFloat(row.maxFullRunTesterWorkTimeInHours), parseFloat(row.maxQaAutomationTime)),
+  //   peekProgTimeToPeekAutomationTimeRatio: (row) => calculateRatio(parseFloat(row.maxInitialProgrammerWorkTimeInHours), parseFloat(row.maxQaAutomationTime)),
+  // }
+  // function calculateRatio(num_1, num_2){
+  //   for(let num = num_2; num > 1; num--) {
+  //       if((num_1 % num) == 0 && (num_2 % num) == 0) {
+  //           num_1=num_1/num;
+  //           num_2=num_2/num;
+  //       }
+  //   }
+  //   const ratio = num_1+":"+num_2;
+  //   return ratio;
+  // }
+  // const dataSets = {
+  //   sprintDayCount: {},
+  //   regressionTestDayCount: {},
+  //   dayStartTime: {},
+  //   programmerCount: {},
+  //   testerCount: {},
+  //   maxInitialDevTime: {},
+  //   maxFullRunCheckTime: {},
+  //   averagePassBackCount: {},
+  //   checkRefinementPercentage: {},
+  // }
+
+  const dataSets = [...Object.keys(configKeysAndTitles)].reduce((acc, k) => {acc[k] = {}; return acc;}, {});
+  const configKeyRanges = [...Object.keys(configKeysAndTitles)].reduce((acc, k) => {acc[k] = {min: Infinity, max: 0}; return acc;}, {});
+  // const dataSets = [...Object.keys(configKeysAndTitles), ...Object.keys(computedConfigComboKeyToCompFunc)].reduce((acc, k) => {acc[k] = {}; return acc;}, {});
+  // const configKeyRanges = [...Object.keys(configKeysAndTitles), ...Object.keys(computedConfigComboKeyToCompFunc)].reduce((acc, k) => {acc[k] = {min: Infinity, max: 0}; return acc;}, {});
+  const metricRanges = Object.keys(trackedMetricKeysAndTitles).reduce((acc, k) => {acc[k] = {min: Infinity, max: 0, nonZeroMin: Infinity}; return acc;}, {});
+  // append the svg object to the body of the page
+
+  function createTooltip(el) {
+    el.style("position", "absolute")
+      .style("pointer-events", "none")
+      .style("top", 0)
+      .style("opacity", 0)
+      .style("background", "white")
+      .style("border-radius", "5px")
+      .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
+      .style("padding", "10px")
+      .style("line-height", "1.3")
+      .style("font-size", "11px");
+  }
+
+  function getTooltipContent(sim, metricKeyName) {
+    let content = `<span style="font-size:14px;"><b>${trackedMetricKeysAndTitles[metricKeyName]}:</b> ~${parseInt(parseFloat(sim[metricKeyName]) * 10000) / 10000}</b></span>`;
+    for (const configKeyName of shownConfigKeys) {
+      content += `<br/><b>${configKeysAndTitles[configKeyName]}:</b> ${sim[configKeyName]}</b>`;
+    }
+    return content;
+  }
+  const tooltipX = d3
+    .scaleLinear()
+    .domain([margin.left, width])
+    .range([margin.left, width]);
+
+  const tooltip = d3.select(document.createElement("div")).call(createTooltip);
+  const tooltipOther = d3.select(document.createElement("div")).call(createTooltip);
+
+  d3.csv("/assets/data/waterfall/sim.csv").then(function (simData) {
+    for (let row of simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount))) {
+      for (let configKey of Object.keys(configKeysAndTitles)) {
+        const rowConfigKeyValue = row[configKey];
+        if (!dataSets[configKey][rowConfigKeyValue]) {
+          dataSets[configKey][rowConfigKeyValue] = {};
+        }
+        if (rowConfigKeyValue < configKeyRanges[configKey].min && rowConfigKeyValue !== null && rowConfigKeyValue !== "") {
+          configKeyRanges[configKey].min = parseFloat(rowConfigKeyValue);
+        } else if (rowConfigKeyValue > configKeyRanges[configKey].max && rowConfigKeyValue !== Infinity) {
+          configKeyRanges[configKey].max = parseFloat(rowConfigKeyValue);
+        }
+        const metricTrackerForConfigKey = dataSets[configKey][rowConfigKeyValue];
+        for (let metricKey of Object.keys(trackedMetricKeysAndTitles)) {
+          if (!metricTrackerForConfigKey[metricKey]) {
+            metricTrackerForConfigKey[metricKey] = [];
+          }
+          const rowMetricValue = row[metricKey];
+          metricTrackerForConfigKey[metricKey].push(rowMetricValue);
+          if (rowMetricValue < metricRanges[metricKey].min && rowMetricValue !== null && rowMetricValue !== "") {
+            metricRanges[metricKey].min = parseFloat(rowMetricValue);
+          } else if (rowMetricValue > metricRanges[metricKey].max && rowMetricValue !== Infinity) {
+            metricRanges[metricKey].max = parseFloat(rowMetricValue);
+          }
+          if (rowMetricValue > 0 && rowMetricValue < metricRanges[metricKey].nonZeroMin && rowMetricValue !== null && rowMetricValue !== "") {
+            metricRanges[metricKey].nonZeroMin = parseFloat(rowMetricValue);
+          }
+        }
+      }
+    }
+    const yAxes = Object.keys(trackedMetricKeysAndTitles).reduce((acc, k) => {
+      var axis;
+      if (metricsThatMustBeScaledLogarithmically.includes(k)) {
+        axis = d3
+          .scaleLog()
+          .domain([metricRanges[k].min, metricRanges[k].max])
+          .range([height - margin.bottom, margin.top])
+          .base(2);
+      } else {
+        axis = d3
+          .scaleLinear()
+          .domain([0, metricRanges[k].max])
+          .range([height - margin.bottom, margin.top]);
+      }
+      acc[k] = axis;
+      return acc;
+    }, {});
+    const metricHistograms = Object.keys(trackedMetricKeysAndTitles).reduce((acc, k) => {
+      var histogram = d3
+        .histogram()
+        .domain(yAxes[k].domain())
+        .thresholds(yAxes[k].ticks(50)) // Important: how many bins approx are going to be made? It is the 'resolution' of the violin plot
+        .value((d) => d);
+      acc[k] = histogram;
+      return acc;
+    }, {});
+    const xAxes = [...Object.keys(configKeysAndTitles)].reduce((acc, k) => {
+      var axis = d3
+        .scaleBand()
+        .range([margin.left, width - margin.right])
+        .domain(Object.keys(dataSets[k]).sort())
+        .padding(0.05);
+      acc[k] = axis;
+      return acc;
+    }, {});
+    const sumStatCache = Object.keys(trackedMetricKeysAndTitles).reduce((acc, k) => {acc[k] = [...Object.keys(configKeysAndTitles)].reduce((acc, k) => {acc[k] = undefined; return acc;}, {});; return acc;}, {})
+    function getHistogramBins(metricKeyName, configKeyName) {
+      if (!sumStatCache[metricKeyName][configKeyName]) {
+        sumStatCache[metricKeyName][configKeyName] = {};
+        sumStatCache[metricKeyName][configKeyName].bins = d3
+          .nest() // nest function allows to group the calculation per level of a factor
+          .key(function (d) {
+            return d[configKeyName];
+          })
+          .rollup(function (d) {
+            let input = d.map((g) => g[metricKeyName]);
+            let bins = metricHistograms[metricKeyName](input);
+            return bins;
+          })
+          .entries(simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount)))
+          .sort(function(a, b) {
+            if (a.key.includes(":")) {
+              const [a1, a2] = a.key.split(":");
+              const aQuotient = parseFloat(a1) / parseFloat(a2);
+              const [b1, b2] = b.key.split(":");
+              const bQuotient = parseFloat(b1) / parseFloat(b2);
+              return d3.ascending(aQuotient, bQuotient);
+            }
+            return d3.ascending(parseFloat(a.key), parseFloat(b.key))
+          });
+      }
+      return sumStatCache[metricKeyName][configKeyName].bins;
+    }
+    function buildGraph(metricKeyName, configKeyName){
+      const bins = getHistogramBins(metricKeyName, configKeyName);
+      var maxNum = 0;
+      for (let i in bins ){
+        const allBins = bins[i].value
+        const lengths = allBins.map(function(a){return a.length;})
+        const longest = d3.max(lengths)
+        if (longest > maxNum) { maxNum = longest }
+      }
+
+      var xNum = d3
+        .scaleLinear()
+        .range([0, xAxes[configKeyName].bandwidth()])
+        .domain([-maxNum, maxNum]);
+
+      // Color scale for dots
+      // var myColor = d3.scaleSymlog([0, 1], [metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+        // .scaleLog()
+        // .domain([metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+      var myColor = d3
+        .scaleLog()
+        .domain([metricRanges[metricKeyName].nonZeroMin, metricRanges[metricKeyName].max]);
+
+      const svgWrapper = divWrapper
+        .append("div")
+        .attr("id", `${configKeyName}SvgWrapper`)
+        .style("position", "relative");
+      const svg = svgWrapper
+        .append("svg")
+        .attr("id", `${configKeyName}Svg`)
+        .attr("width", "100%")
+        .attr("height", height)
+        // .style("position", "relative");
+
+      svg
+        .selectAll("g.paths")
+        .data(bins)
+        .join("g")
+        .attr("class", "paths")
+        .attr("transform", function (d) {
+          return "translate(" + xAxes[configKeyName](d.key) + " ,0)";
+        }) // Translation on the right to be at the group position
+        .append("path")
+        .datum(function (d) {
+          return d.value;
+        }) // So now we are working bin per bin
+        .style("stroke", "none")
+        .style("fill", "grey")
+        .attr(
+          "d",
+          d3
+            .area()
+            .x0(xNum(0))
+            .x1(function (d) {
+              return xNum(d.length);
+            })
+            .y(function (d) {
+              return yAxes[metricKeyName](d.x0);
+            })
+            .curve(d3.curveCatmullRom) // This makes the line smoother to give the violin appearance. Try d3.curveStep to see the difference
+        );
+
+      // Add individual points with jitter
+      var x = xAxes[configKeyName]
+      x.domain(bins.map(function(d) {
+        return d.key;
+      }));
+      var y = yAxes[metricKeyName]
+      var jitterWidth = ((width/2) / Object.keys(dataSets[configKeyName]).length) - 10;
+      const filteredSimData = simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount));
+      svg.append("g")
+        .attr("class", "circleG")
+        .selectAll("circle")
+        .data(filteredSimData)
+        .join("circle")
+        .attr("cx", function (d) {
+          return x(d[configKeyName]) + x.bandwidth() / 2 - Math.random() * jitterWidth;
+        })
+        .attr("cy", function (d) {
+          if (isNaN(d[metricKeyName])) {
+            console.log('here')
+          }
+          return y(d[metricKeyName]);
+        })
+        .attr("r", 3)
+        .style("fill", (d) => d3.interpolateInferno(myColor(d[metricKeyName])) || d3.interpolateInferno(0))
+        .style("opacity", 0.5)
+        .attr("stroke", "white")
+        .on("mouseover", function (sim, i) {
+          d3.select(this).attr("stroke", "blue");
+          const {left, right, top, bottom} = this.getBoundingClientRect();
+          const cx = (left + right) / 2;
+          const cy = (top + bottom) / 2;
+          tooltip.style("opacity", 1).html(getTooltipContent(sim, metricKeyName));
+          const translateXShift = cx > graphDivMiddleX ? 0 : tooltip.node().getBoundingClientRect().width;
+          const x = cx > graphDivMiddleX ? margin.left : width - (translateXShift + margin.right);
+          const y = svgWrapper.node().offsetTop;
+          tooltip.style("left", x + "px").style("top", y + "px");
+        })
+        .on("mouseleave", function (event, target) {
+          d3.select(this).attr("stroke", "white");
+          // set opacity to 0 so it is no longer visible and set position to 0,0
+          // so that getBoundingClientRect reflects natural width for next positioning.
+          tooltip
+            .style("opacity", 0)
+            .style("left", 0 + "px")
+            .style("top", 0 + "px");
+        });
+      svg.append("g")
+        .attr("class", "leftAxisG")
+        .attr('transform', `translate(${margin.left}, 0)`)
+        .call(d3.axisLeft(y))
+        // Add label
+        .append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('class', 'axis-label')
+        .attr('fill', 'black')
+        .text(trackedMetricKeysAndTitles[metricKeyName])
+        .attr('y', -40)
+        .attr('x', -((margin.top + (height - margin.top - margin.bottom)) / 2))
+        .attr('font-size', '1.2em');
+      svg.append("g")
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x))
+        .append('text')
+        .attr('class', 'axis-label')
+        .attr('fill', 'black')
+        .text(configKeysAndTitles[configKeyName])
+        .attr('x', (margin.left + (width - margin.left - margin.right)) / 2)
+        .attr('font-size', '1.2em')
+        .attr('y', 40);
+    }
+    function updateGraph(metricKeyName, configKeyName){
+      const bins = getHistogramBins(metricKeyName, configKeyName);
+      var maxNum = 0;
+      for (let i in bins ){
+        const allBins = bins[i].value
+        const lengths = allBins.map(function(a){return a.length;})
+        const longest = d3.max(lengths)
+        if (longest > maxNum) { maxNum = longest }
+      }
+
+      var xNum = d3
+        .scaleLinear()
+        .range([0, xAxes[configKeyName].bandwidth()])
+        .domain([-maxNum, maxNum]);
+
+      // Color scale for dots
+      // var myColor = d3.scaleSymlog([0, 1], [metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+      var myColor = d3
+        .scaleLog()
+        .domain([metricRanges[metricKeyName].nonZeroMin, metricRanges[metricKeyName].max]);
+
+      const svgWrapper = divWrapper
+        .select(`#${configKeyName}SvgWrapper`);
+      const svg = svgWrapper
+        .select(`#${configKeyName}Svg`);
+
+      svg
+        .selectAll("g.paths")
+        .data(bins)
+        .join("g")
+        .attr("transform", function (d) {
+          return "translate(" + xAxes[configKeyName](d.key) + " ,0)";
+        }) // Translation on the right to be at the group position
+        .select("path")
+        .datum(function (d) {
+          return d.value;
+        }) // So now we are working bin per bin
+        .style("stroke", "none")
+        .style("fill", "grey")
+        .attr(
+          "d",
+          d3
+            .area()
+            .x0(xNum(0))
+            .x1(function (d) {
+              return xNum(d.length);
+            })
+            .y(function (d) {
+              return yAxes[metricKeyName](d.x0);
+            })
+            .curve(d3.curveCatmullRom) // This makes the line smoother to give the violin appearance. Try d3.curveStep to see the difference
+        );
+
+      // Add individual points with jitter
+      var x = xAxes[configKeyName]
+      x.domain(bins.map(function(d) {
+        return d.key;
+      }));
+      var y = yAxes[metricKeyName]
+      var jitterWidth = ((width/2) / Object.keys(dataSets[configKeyName]).length) - 10;
+      const filteredSimData = simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount));
+      svg.select("g.circleG")
+        .selectAll("circle")
+        .data(filteredSimData)
+        .join("circle")
+        .on("mouseover", function (sim, i) {
+          d3.select(this).attr("stroke", "blue");
+          const {left, right, top, bottom} = this.getBoundingClientRect();
+          const cx = (left + right) / 2;
+          const cy = (top + bottom) / 2;
+          tooltip.style("opacity", 1).html(getTooltipContent(sim, metricKeyName));
+          const translateXShift = cx > graphDivMiddleX ? 0 : tooltip.node().getBoundingClientRect().width;
+          const x = cx > graphDivMiddleX ? margin.left : width - (translateXShift + margin.right);
+          const y = svgWrapper.node().offsetTop;
+          tooltip.style("left", x + "px").style("top", y + "px");
+        })
+        .on("mouseleave", function (event, target) {
+          d3.select(this).attr("stroke", "white");
+          // set opacity to 0 so it is no longer visible and set position to 0,0
+          // so that getBoundingClientRect reflects natural width for next positioning.
+          tooltip
+            .style("opacity", 0)
+            .style("left", 0 + "px")
+            .style("top", 0 + "px");
+        })
+        .attr("cx", function (d) {
+          return x(d[configKeyName]) + x.bandwidth() / 2 - Math.random() * jitterWidth;
+        })
+        .attr("cy", function (d) {
+          if (isNaN(d[metricKeyName])) {
+            console.log('here')
+          }
+          return y(d[metricKeyName]);
+        })
+        .style("fill", (d) => d3.interpolateInferno(myColor(d[metricKeyName])) || d3.interpolateInferno(0));
+      svg.select("g.leftAxisG")
+        .call(d3.axisLeft(y))
+        // Add label
+        .select('text.axis-label')
+        .text(trackedMetricKeysAndTitles[metricKeyName]);
+    }
+    function buildOtherGraph(){
+      let configKeyName = dataSetSelectOtherConfig.property("value");
+      let metricKeyName = dataSetSelectOtherMetric.property("value");
+      const bins = getHistogramBins(metricKeyName, configKeyName);
+      var maxNum = 0;
+      for (let i in bins ){
+        const allBins = bins[i].value
+        const lengths = allBins.map(function(a){return a.length;})
+        const longest = d3.max(lengths)
+        if (longest > maxNum) { maxNum = longest }
+      }
+
+      var xNum = d3
+        .scaleLinear()
+        .range([0, xAxes[configKeyName].bandwidth()])
+        .domain([-maxNum, maxNum]);
+
+      // Color scale for dots
+      // var myColor = d3.scaleSymlog([0, 1], [metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+        // .scaleLog()
+        // .domain([metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+      var myColor = d3
+        .scaleLog()
+        .domain([metricRanges[metricKeyName].nonZeroMin, metricRanges[metricKeyName].max]);
+
+      const svgWrapper = divOtherWrapper
+        .append("div")
+        .attr("id", `otherSvgWrapper`)
+        .style("position", "relative");
+      const svg = svgWrapper
+        .append("svg")
+        .attr("id", `otherSvg`)
+        .attr("width", "100%")
+        .attr("height", height)
+        // .style("position", "relative");
+
+      svg
+        .selectAll("g.paths")
+        .data(bins)
+        .join("g")
+        .attr("class", "paths")
+        .attr("transform", function (d) {
+          return "translate(" + xAxes[configKeyName](d.key) + " ,0)";
+        }) // Translation on the right to be at the group position
+        .append("path")
+        .datum(function (d) {
+          return d.value;
+        }) // So now we are working bin per bin
+        .style("stroke", "none")
+        .style("fill", "grey")
+        .attr(
+          "d",
+          d3
+            .area()
+            .x0(xNum(0))
+            .x1(function (d) {
+              return xNum(d.length);
+            })
+            .y(function (d) {
+              return yAxes[metricKeyName](d.x0);
+            })
+            .curve(d3.curveCatmullRom) // This makes the line smoother to give the violin appearance. Try d3.curveStep to see the difference
+        );
+
+      // Add individual points with jitter
+      var x = xAxes[configKeyName]
+      x.domain(bins.map(function(d) {
+        return d.key;
+      }));
+      var y = yAxes[metricKeyName]
+      var jitterWidth = ((width/2) / Object.keys(dataSets[configKeyName]).length) - 10;
+      const filteredSimData = simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount));
+      svg.append("g")
+        .attr("class", "circleG")
+        .selectAll("circle")
+        .data(filteredSimData)
+        .join("circle")
+        .attr("cx", function (d) {
+          return x(d[configKeyName]) + x.bandwidth() / 2 - Math.random() * jitterWidth;
+        })
+        .attr("cy", function (d) {
+          if (isNaN(d[metricKeyName])) {
+            console.log('here')
+          }
+          return y(d[metricKeyName]);
+        })
+        .attr("r", 3)
+        .style("fill", (d) => d3.interpolateInferno(myColor(d[metricKeyName])) || d3.interpolateInferno(0))
+        .style("opacity", 0.5)
+        .attr("stroke", "white")
+        .on("mouseover", function (sim, i) {
+          d3.select(this).attr("stroke", "blue");
+          const {left, right, top, bottom} = this.getBoundingClientRect();
+          const cx = (left + right) / 2;
+          const cy = (top + bottom) / 2;
+          tooltipOther.style("opacity", 1).html(getTooltipContent(sim, metricKeyName));
+          const translateXShift = cx > graphDivMiddleX ? 0 : tooltipOther.node().getBoundingClientRect().width;
+          const x = cx > graphDivMiddleX ? margin.left : width - (translateXShift + margin.right);
+          const y = svgWrapper.node().offsetTop;
+          tooltipOther.style("left", x + "px").style("top", y + "px");
+        })
+        .on("mouseleave", function (event, target) {
+          d3.select(this).attr("stroke", "white");
+          // set opacity to 0 so it is no longer visible and set position to 0,0
+          // so that getBoundingClientRect reflects natural width for next positioning.
+          tooltipOther
+            .style("opacity", 0)
+            .style("left", 0 + "px")
+            .style("top", 0 + "px");
+        });
+      svg.append("g")
+        .attr("class", "leftAxisG")
+        .attr('transform', `translate(${margin.left}, 0)`)
+        .call(d3.axisLeft(y))
+        // Add label
+        .append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('class', 'axis-label')
+        .attr('fill', 'black')
+        .text(trackedMetricKeysAndTitles[metricKeyName])
+        .attr('y', -40)
+        .attr('x', -((margin.top + (height - margin.top - margin.bottom)) / 2))
+        .attr('font-size', '1.2em');
+      svg.append("g")
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x))
+        .append('text')
+        .attr('class', 'axis-label')
+        .attr('fill', 'black')
+        .text(configKeysAndTitles[configKeyName])
+        .attr('x', (margin.left + (width - margin.left - margin.right)) / 2)
+        .attr('font-size', '1.2em')
+        .attr('y', 40);
+    }
+    function updateOtherGraph(metricKeyName, configKeyName){
+      const bins = getHistogramBins(metricKeyName, configKeyName);
+      var maxNum = 0;
+      for (let i in bins ){
+        const allBins = bins[i].value
+        const lengths = allBins.map(function(a){return a.length;})
+        const longest = d3.max(lengths)
+        if (longest > maxNum) { maxNum = longest }
+      }
+
+      var xNum = d3
+        .scaleLinear()
+        .range([0, xAxes[configKeyName].bandwidth()])
+        .domain([-maxNum, maxNum]);
+
+      // Color scale for dots
+      // var myColor = d3.scaleSymlog([0, 1], [metricRanges[metricKeyName].min, metricRanges[metricKeyName].max]);
+      var myColor = d3
+        .scaleLog()
+        .domain([metricRanges[metricKeyName].nonZeroMin, metricRanges[metricKeyName].max]);
+
+      const svgWrapper = divOtherWrapper
+        .select(`#otherSvgWrapper`);
+      const svg = svgWrapper
+        .select(`#otherSvg`);
+
+      svg
+        .selectAll("g.paths")
+        .data(bins)
+        .join("g")
+        .attr("transform", function (d) {
+          return "translate(" + xAxes[configKeyName](d.key) + " ,0)";
+        }) // Translation on the right to be at the group position
+        .select("path")
+        .datum(function (d) {
+          return d.value;
+        }) // So now we are working bin per bin
+        .style("stroke", "none")
+        .style("fill", "grey")
+        .attr(
+          "d",
+          d3
+            .area()
+            .x0(xNum(0))
+            .x1(function (d) {
+              return xNum(d.length);
+            })
+            .y(function (d) {
+              return yAxes[metricKeyName](d.x0);
+            })
+            .curve(d3.curveCatmullRom) // This makes the line smoother to give the violin appearance. Try d3.curveStep to see the difference
+        );
+
+      // Add individual points with jitter
+      var x = xAxes[configKeyName]
+      x.domain(bins.map(function(d) {
+        return d.key;
+      }));
+      var y = yAxes[metricKeyName]
+      var jitterWidth = ((width/2) / Object.keys(dataSets[configKeyName]).length) - 10;
+      const filteredSimData = simData.filter(r => !!r.projectedDeadlockAsSprintCount && !isNaN(r.projectedDeadlockAsSprintCount));
+      svg.select("g.circleG")
+        .selectAll("circle")
+        .data(filteredSimData)
+        .join("circle")
+        .on("mouseover", function (sim, i) {
+          d3.select(this).attr("stroke", "blue");
+          const {left, right, top, bottom} = this.getBoundingClientRect();
+          const cx = (left + right) / 2;
+          const cy = (top + bottom) / 2;
+          tooltipOther.style("opacity", 1).html(getTooltipContent(sim, metricKeyName));
+          const translateXShift = cx > graphDivMiddleX ? 0 : tooltipOther.node().getBoundingClientRect().width;
+          const x = cx > graphDivMiddleX ? margin.left : width - (translateXShift + margin.right);
+          const y = svgWrapper.node().offsetTop;
+          tooltipOther.style("left", x + "px").style("top", y + "px");
+        })
+        .on("mouseleave", function (event, target) {
+          d3.select(this).attr("stroke", "white");
+          // set opacity to 0 so it is no longer visible and set position to 0,0
+          // so that getBoundingClientRect reflects natural width for next positioning.
+          tooltipOther
+            .style("opacity", 0)
+            .style("left", 0 + "px")
+            .style("top", 0 + "px");
+        })
+        .attr("cx", function (d) {
+          return x(d[configKeyName]) + x.bandwidth() / 2 - Math.random() * jitterWidth;
+        })
+        .attr("cy", function (d) {
+          if (isNaN(d[metricKeyName])) {
+            console.log('here')
+          }
+          return y(d[metricKeyName]);
+        })
+        .style("fill", (d) => d3.interpolateInferno(myColor(d[metricKeyName])) || d3.interpolateInferno(0));
+      svg.select("g.leftAxisG")
+        .call(d3.axisLeft(y))
+        // Add label
+        .select('text.axis-label')
+        .text(trackedMetricKeysAndTitles[metricKeyName]);
+    }
+    buildGraph("growthRate", "sprintDayCount");
+    // buildGraph("growthRate", "regressionTestDayCount");
+    // buildGraph("growthRate", "dayStartTime");
+    // buildGraph("growthRate", "programmerCount");
+    // buildGraph("growthRate", "testerCount");
+    // buildGraph("growthRate", "maxInitialProgrammerWorkTimeInHours");
+    buildGraph("growthRate", "maxFullRunTesterWorkTimeInHours");
+    buildGraph("growthRate", "maxQaAutomationTime");
+    buildGraph("growthRate", "averagePassBackCount");
+    buildGraph("growthRate", "checkRefinement");
+    buildGraph("growthRate", "programmerToTesterRatio");
+    divWrapper.node().appendChild(tooltip.node());
+    const dataSetSelect = d3.select("#dataSetSelection");
+    const dataSetSelectOtherConfig = d3.select("#dataSetSelectionOtherConfig");
+    const dataSetSelectOtherMetric = d3.select("#dataSetSelectionOtherMetric");
+    function updateAllGraphsForSelection() {
+      let selectedOption = dataSetSelect.property("value");
+      // updateGraph(selectedOption, "sprintDayCount");
+      // updateGraph(selectedOption, "regressionTestDayCount");
+      // updateGraph(selectedOption, "dayStartTime");
+      // updateGraph(selectedOption, "programmerCount");
+      // updateGraph(selectedOption, "testerCount");
+      updateGraph(selectedOption, "maxInitialProgrammerWorkTimeInHours");
+      updateGraph(selectedOption, "maxFullRunTesterWorkTimeInHours");
+      updateGraph(selectedOption, "maxQaAutomationTime");
+      updateGraph(selectedOption, "averagePassBackCount");
+      updateGraph(selectedOption, "checkRefinement");
+      updateGraph(selectedOption, "programmerToTesterRatio");
+    }
+    function updateOtherGraphForSelection() {
+      let selectedConfigOption = dataSetSelectOtherConfig.property("value");
+      let selectedMetricOption = dataSetSelectOtherMetric.property("value");
+      updateOtherGraph(selectedMetricOption, selectedConfigOption);
+    }
+    for (const metricKey of Object.keys(trackedMetricKeysAndTitles)){
+      const option = d3.select(document.createElement("option"));
+      option.text(trackedMetricKeysAndTitles[metricKey]).attr("value", metricKey);
+      dataSetSelect.node().appendChild(option.node());
+    }
+    for (const configKey of Object.keys(configKeysAndTitles)){
+      const option = d3.select(document.createElement("option"));
+      option.text(configKeysAndTitles[configKey]).attr("value", configKey);
+      dataSetSelectOtherConfig.node().appendChild(option.node());
+    }
+    for (const metricKey of Object.keys(trackedMetricKeysAndTitles)){
+      const option = d3.select(document.createElement("option"));
+      option.text(trackedMetricKeysAndTitles[metricKey]).attr("value", metricKey);
+      dataSetSelectOtherMetric.node().appendChild(option.node());
+    }
+    dataSetSelect
+      .node()
+      .addEventListener("change", (event) => updateAllGraphsForSelection());
+    dataSetSelectOtherConfig
+      .node()
+      .addEventListener("change", (event) => updateOtherGraphForSelection());
+    dataSetSelectOtherMetric
+      .node()
+      .addEventListener("change", (event) => updateOtherGraphForSelection());
+    buildOtherGraph();
+    divOtherWrapper.node().appendChild(tooltipOther.node());
+  });
+</script>

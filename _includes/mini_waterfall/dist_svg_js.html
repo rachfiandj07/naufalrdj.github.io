@@ -1,0 +1,77 @@
+<script src="https://d3js.org/d3.v6.js"></script>
+<script type="module">
+  import "/assets/js/probability-distributions-bundle.js";
+  // var margin = { top: 20, right: 20, bottom: 60, left: 80 },
+  const margin = {top: 0, right: 30, bottom: 20, left: 30};
+  const width = 710 - margin.left - margin.right,
+    height = 200
+
+
+
+  const dodger = radius => {
+    const radius2 = radius ** 2;
+    const bisect = d3.bisector(d => d.x);
+    const circles = [];
+    return x => {
+      const l = bisect.left(circles, x - radius);
+      const r = bisect.right(circles, x + radius, l);
+      let y = 0;
+      for (let i = l; i < r; ++i) {
+        const { x: xi, y: yi } = circles[i];
+        const x2 = (xi - x) ** 2;
+        const y2 = (yi - y) ** 2;
+        if (radius2 > x2 + y2) {
+          y = yi + Math.sqrt(radius2 - x2) + 1e-6;
+          i = l - 1;
+          continue;
+        }
+      }
+      circles.splice(bisect.left(circles, x, l, r), 0, { x, y });
+      return y;
+    };
+  }
+
+  function pachinko(random, svg, text) {
+    const n = 2500;
+    const radius = 2;
+    const dodge = dodger(radius * 2 + 1);
+
+    svg
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    const values = random;
+    const extent = d3.extent(values);
+    const x = d3.scaleLinear().domain(extent).range([margin.left, width - margin.right]).nice();
+    svg.style("overflow", "visible");
+
+    svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x));
+
+    for (let i = 0; i < n; ++i) {
+      const cx = x(values[i]);
+      const cy = height - margin.bottom - dodge(cx) - radius - 1;
+      if (cy < margin.top) break;
+      svg.append("circle")
+        .attr("cx", cx)
+        .attr("cy", -400)
+        .attr("r", radius)
+        .attr("cy", cy);
+    }
+    svg.append("text")
+      .attr("transform", "translate(" + (width/2) + " ," + (height + margin.top + 20) + ")")
+      .style("text-anchor", "middle")
+      .text(text)
+      .attr("font-size", "0.7em");
+  }
+  var svgA = d3
+    .select("svg#distA");
+  const gammaAValues = PD.rgamma(2500, 3, 0.1).filter(v => v <= 100);
+  pachinko(gammaAValues, svgA, "Percent of Maximum (%)");
+  var svgB = d3
+    .select("svg#distB");
+  const gammaBValues = PD.rgamma(2500, 1, 5).map(v => v * 100);
+  pachinko(gammaBValues, svgB, "Percent of Primary Iteration (%)");
+</script>

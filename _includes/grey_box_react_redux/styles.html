@@ -1,0 +1,50 @@
+<style>
+circle {
+  fill: white;
+  stroke: black;
+}
+circle[data-test-target] {
+  fill: steelblue !important;
+}
+#fullFlow path { 
+  display: none;
+}
+
+path.flow {
+  stroke-width: 5;
+}
+
+#fullFlow circle:hover {
+  fill: steelblue;
+}
+
+#isolated circle {
+  fill: grey;
+}
+
+#isolated circle.permawhite {
+  fill: white;
+}
+
+[data-result='pass'] {
+  fill: green;
+}
+
+[data-result='fail'] {
+  fill: red;
+}
+
+path[data-result] {
+  stroke-width: 5;
+  fill: none;
+}
+
+path[data-result='pass'] {
+  stroke: green;
+}
+
+
+path[data-result='fail'] {
+  stroke: red;
+}
+</style>

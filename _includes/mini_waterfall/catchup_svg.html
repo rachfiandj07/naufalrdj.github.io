@@ -1,0 +1,138 @@
+<script src="https://d3js.org/d3.v4.js"></script>
+<svg width="100%" height="600" xmlns="http://www.w3.org/2000/svg" id="catchupSvg">
+ </svg>
+
+<script type="module">
+  const rectHeight = 40;
+  const measureLineHeight = rectHeight / 4;
+  const trackGap = 100;
+  const svg = d3.select("#catchupSvg");
+  svg.attr("height", (trackGap * 4) + (rectHeight * 5));
+  const margin = { left: 20, right: 20, top: 5 };
+  const svgWidth = parseFloat(svg.style("width").replace("px", ""));
+  const usableSpace = svgWidth - (margin.left + margin.right);
+  const progCRSeparatorWidth = 2.5;
+  const iterSeparatorWidth = 10;
+  const iterCount = 3;
+  const progCRUsableUnits = usableSpace - ((iterSeparatorWidth * (iterCount - 1)) + (progCRSeparatorWidth * iterCount));
+  const checkUsableUnits = usableSpace - (iterSeparatorWidth * (iterCount - 1));
+  const progIterTimes = [127, 70, 86];
+  const crIterTimes = [55, 50, 45];
+  const totalProgrammerTime = progIterTimes.reduce((acc, time) => acc + time) + crIterTimes.reduce((acc, time) => acc + time);
+  const checkIterTimes = [50, 150, 240];
+  const totalCheckTime = checkIterTimes.reduce((acc, time) => acc + time);
+  const progIterWidths = progIterTimes.map(time => (time / totalProgrammerTime) * progCRUsableUnits);
+  const crIterWidths = crIterTimes.map(time => (time / totalProgrammerTime) * progCRUsableUnits);
+  const checkIterWidths = checkIterTimes.map(time => (time / totalCheckTime) * checkUsableUnits);
+
+  const progIterXs = [];
+  const crIterXs = [];
+  const checkIterXs = [];
+  let progXIndent = margin.left;
+  let checkXIndent = margin.left;
+  for (let i = 0; i < iterCount; i++) {
+    progIterXs.push(progXIndent);
+    progXIndent += progIterWidths[i];
+    progXIndent += progCRSeparatorWidth;
+    crIterXs.push(progXIndent);
+    progXIndent += crIterWidths[i];
+    progXIndent += iterSeparatorWidth;
+
+    checkIterXs.push(checkXIndent);
+    checkXIndent += checkIterWidths[i];
+    checkXIndent += iterSeparatorWidth;
+  }
+  const interruptProgressPercent = 0.8;
+  const totalProgTimeForIter = progIterTimes[1] + crIterTimes[1];
+  const interruptProgMinute = totalProgTimeForIter * interruptProgressPercent;
+  const interruptOverallMinute = interruptProgMinute + progIterTimes[0];
+  const interruptOverallProgressPercent = interruptOverallMinute / totalProgrammerTime;
+  const interruptMaskRectX = progIterXs[1] + (progIterWidths[1] + checkIterWidths[1] + (progCRSeparatorWidth* interruptProgressPercent)) * (interruptProgMinute / (progIterTimes[1] + checkIterTimes[1]));
+  const checkMaskRectX = checkIterXs[1] - (iterSeparatorWidth / 2);
+  const defs = svg.append("defs");
+  const mask = defs.append("mask").attr("id", "iterExampleMask");
+  mask.append("rect").attr("x", 0).attr("y", 0).attr("width", "100%").attr("height", "100%").attr("fill", "#fff");
+  mask.append("rect").attr("x", interruptMaskRectX).attr("y", 0).attr("width", "100%").attr("height", "100%").attr("fill", "#666");
+  mask.append("rect").attr("x", checkMaskRectX).attr("y", trackGap + rectHeight + margin.top).attr("width", "100%").attr("height", "100%").attr("fill", "#666");
+  mask.append("rect").attr("x", 0).attr("y", (trackGap * 2) + (rectHeight * 2) + margin.top).attr("width", "100%").attr("height", "100%").attr("fill", "#666");
+  const rectG = svg.append("g").attr("mask", "url(#iterExampleMask)");
+  const progRectY = trackGap;
+  const checkRectY = trackGap + rectHeight + trackGap;
+  for (let i = 0; i < iterCount; i++) {
+    rectG.append("rect").attr("x", progIterXs[i]).attr("y", progRectY).attr("width", progIterWidths[i]).attr("height", rectHeight).attr("fill", "#4f86ff");
+    rectG.append("rect").attr("x", crIterXs[i]).attr("y", progRectY).attr("width", crIterWidths[i]).attr("height", rectHeight).attr("fill", "#4fffbe");
+    rectG.append("rect").attr("x", checkIterXs[i]).attr("y", checkRectY).attr("width", checkIterWidths[i]).attr("height", rectHeight).attr("fill", "#ffe44f");
+  }
+  const progMeasureLineDStartX = progIterXs[1];
+  const progMeasureLineDEndX = interruptMaskRectX;
+  const progMeasureLineDEndPointY = trackGap + rectHeight + margin.top;
+  const progMeasureLineDMidY = progMeasureLineDEndPointY + measureLineHeight;
+  const progMeasureIndicatorLineDEndY = progMeasureLineDMidY + measureLineHeight;
+  const progMeasureIndicatorLineDX = (progMeasureLineDStartX + progMeasureLineDEndX) / 2;
+  const progMeasureLineD = `M${progMeasureLineDStartX},${progMeasureLineDEndPointY} L${progMeasureLineDStartX},${progMeasureLineDMidY} L${progMeasureLineDEndX},${progMeasureLineDMidY} L${progMeasureLineDEndX},${progMeasureLineDEndPointY} M${progMeasureIndicatorLineDX},${progMeasureLineDMidY} L${progMeasureIndicatorLineDX},${progMeasureIndicatorLineDEndY}`;
+  svg.append("path").attr("stroke", "black").attr("fill", "none").attr("stroke-width", 1.5).attr("d", progMeasureLineD);
+  const checkMeasureLineDStartX = checkIterXs[1];
+  const checkMeasureLineDEndX = checkIterXs[1] + (checkIterWidths[1] * interruptProgressPercent);
+  const checkMeasureLineDEndPointY = (trackGap + rectHeight + trackGap) - margin.top;
+  const checkMeasureLineDMidY = checkMeasureLineDEndPointY - measureLineHeight;
+  const checkMeasureIndicatorLineDEndY = checkMeasureLineDMidY - measureLineHeight;
+  const checkMeasureIndicatorLineDX = (checkMeasureLineDStartX + checkMeasureLineDEndX) / 2;
+  const checkMeasureLineD = `M${checkMeasureLineDStartX},${checkMeasureLineDEndPointY} L${checkMeasureLineDStartX},${checkMeasureLineDMidY} L${checkMeasureLineDEndX},${checkMeasureLineDMidY} L${checkMeasureLineDEndX},${checkMeasureLineDEndPointY} M${checkMeasureIndicatorLineDX},${checkMeasureLineDMidY} L${checkMeasureIndicatorLineDX},${checkMeasureIndicatorLineDEndY}`;
+  svg.append("path").attr("stroke", "black").attr("fill", "none").attr("stroke-width", 1.5).attr("d", checkMeasureLineD);
+
+  const progMinuteTextY = trackGap - margin.top;
+  const checkMinuteTextY = (trackGap * 2) + (rectHeight * 2) + margin.top;
+  for (let i = 0; i < iterCount; i++) {
+    const progIterMiddleX = progIterXs[i] + (progIterWidths[i] / 2);
+    const crIterMiddleX = crIterXs[i] + (crIterWidths[i] / 2);
+    const checkIterMiddleX = checkIterXs[i] + (checkIterWidths[i] / 2);
+    svg.append('text').text(`${progIterTimes[i]} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', progIterMiddleX).attr('y', progMinuteTextY);
+    svg.append('text').text(`${crIterTimes[i]} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', crIterMiddleX).attr('y', progMinuteTextY);
+    svg.append('text').text(`${checkIterTimes[i]} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'hanging').attr('x', checkIterMiddleX).attr('y', checkMinuteTextY);
+  }
+  svg.append('text').text(`${interruptProgressPercent * 100}% (~${Math.ceil((progIterTimes[1] + crIterTimes[1]) * interruptProgressPercent)} minutes)`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'hanging').attr('x', progMeasureIndicatorLineDX).attr('y', progMeasureIndicatorLineDEndY + margin.top);
+  const catchUpCheckMinutes = Math.ceil(checkIterTimes[1] * interruptProgressPercent);
+  const textSample = svg.append('text').text(`${interruptProgressPercent * 100}% (~${catchUpCheckMinutes} minutes)`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', checkMeasureIndicatorLineDX).attr('y', checkMeasureIndicatorLineDEndY - margin.top);
+  const textHeight = textSample.node().getBBox().height;
+  const progOverallMeasureLineDStartX = progIterXs[0];
+  const progOverallMeasureLineDEndX = progMeasureLineDEndX;
+  const progOverallMeasureLineDEndPointY = (trackGap - (margin.top * 2)) - textHeight;
+  const progOverallMeasureLineDMidY = progOverallMeasureLineDEndPointY - measureLineHeight;
+  const progOverallMeasureIndicatorLineDEndY = progOverallMeasureLineDMidY - measureLineHeight;
+  const progOverallMeasureIndicatorLineDX = (progOverallMeasureLineDStartX + progOverallMeasureLineDEndX) / 2;
+  const progOverallMeasureLineD = `M${progOverallMeasureLineDStartX},${progOverallMeasureLineDEndPointY} L${progOverallMeasureLineDStartX},${progOverallMeasureLineDMidY} L${progOverallMeasureLineDEndX},${progOverallMeasureLineDMidY} L${progOverallMeasureLineDEndX},${progOverallMeasureLineDEndPointY} M${progOverallMeasureIndicatorLineDX},${progOverallMeasureLineDMidY} L${progOverallMeasureIndicatorLineDX},${progOverallMeasureIndicatorLineDEndY}`;
+  svg.append("path").attr("stroke", "black").attr("fill", "none").attr("stroke-width", 1.5).attr("d", progOverallMeasureLineD);
+  svg.append('text').text(`~${Math.ceil(interruptOverallProgressPercent * 100)}% (~${interruptOverallMinute} minutes)`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', progOverallMeasureIndicatorLineDX).attr('y', progOverallMeasureIndicatorLineDEndY - margin.top);
+
+  const automationTime = 315;
+  const autoRectWidth = svgWidth - (margin.left + margin.right);
+  const autoRectY = (trackGap * 3) + (rectHeight * 2);
+  rectG.append("rect").attr("x", margin.left).attr("y", autoRectY).attr("width", autoRectWidth).attr("height", rectHeight).attr("fill", "#ff9900");
+  const automationMeasureLineDStartX = progIterXs[0];
+  const automationMeasureLineDEndX = progMeasureLineDEndX;
+  const automationMeasureLineDEndPointY = ((trackGap * 3) + (rectHeight * 2)) - margin.top;
+  const automationMeasureLineDMidY = automationMeasureLineDEndPointY - measureLineHeight;
+  const automationMeasureIndicatorLineDEndY = automationMeasureLineDMidY - measureLineHeight;
+  const automationMeasureIndicatorLineDX = (automationMeasureLineDStartX + automationMeasureLineDEndX) / 2;
+  const automationMeasureLineD = `M${automationMeasureLineDStartX},${automationMeasureLineDEndPointY} L${automationMeasureLineDStartX},${automationMeasureLineDMidY} L${automationMeasureLineDEndX},${automationMeasureLineDMidY} L${automationMeasureLineDEndX},${automationMeasureLineDEndPointY} M${automationMeasureIndicatorLineDX},${automationMeasureLineDMidY} L${automationMeasureIndicatorLineDX},${automationMeasureIndicatorLineDEndY}`;
+  svg.append("path").attr("stroke", "black").attr("fill", "none").attr("stroke-width", 1.5).attr("d", automationMeasureLineD);
+  const catchUpAutoMinutes = Math.ceil(interruptOverallProgressPercent * automationTime);
+  svg.append('text').text(`~${Math.ceil(interruptOverallProgressPercent * 100)}% (~${catchUpAutoMinutes} minutes)`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', automationMeasureIndicatorLineDX).attr('y', automationMeasureIndicatorLineDEndY - margin.top);
+  const autoIterMiddleX = autoRectWidth / 2;
+  svg.append('text').text(`${automationTime} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'hanging').attr('x', autoIterMiddleX).attr('y', autoRectY + rectHeight + margin.top);
+
+  // catchup rects
+  const catchUpRectY = autoRectY + rectHeight + trackGap;
+  const totalCatchUpTime = catchUpCheckMinutes + catchUpAutoMinutes;
+  const catchUpUsableUnits = usableSpace - (iterSeparatorWidth * (2 - 1));
+  const checkCatchUpRectWidth = (catchUpCheckMinutes / totalCatchUpTime) * catchUpUsableUnits;
+  const autoCatchUpRectWidth = (catchUpAutoMinutes / totalCatchUpTime) * catchUpUsableUnits;
+  svg.append("rect").attr("x", margin.left).attr("y", catchUpRectY).attr("width", checkCatchUpRectWidth).attr("height", rectHeight).attr("fill", "#ffe44f");
+  svg.append("rect").attr("x", margin.left + checkCatchUpRectWidth + iterSeparatorWidth).attr("y", catchUpRectY).attr("width", autoCatchUpRectWidth).attr("height", rectHeight).attr("fill", "#ff9900");
+  svg.append('text').text(`${catchUpCheckMinutes} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', margin.left + (checkCatchUpRectWidth / 2)).attr('y', catchUpRectY - margin.top);
+  svg.append('text').text(`${catchUpAutoMinutes} minutes`).attr('font-size', '0.8em').attr('text-anchor', 'middle').attr('alignment-baseline', 'baseline').attr('x', margin.left + checkCatchUpRectWidth + iterSeparatorWidth + (autoCatchUpRectWidth / 2)).attr('y', catchUpRectY - margin.top);
+  svg.append('text').text(`Programming/Code Review Iterations`).attr('font-size', '0.8em').attr('text-anchor', 'end').attr('alignment-baseline', 'baseline').attr('x', autoRectWidth + margin.left).attr('y', (progRectY - (margin.top * 2)) - textHeight);
+  svg.append('text').text(`Checking Iterations`).attr('font-size', '0.8em').attr('text-anchor', 'end').attr('alignment-baseline', 'baseline').attr('x', autoRectWidth + margin.left).attr('y', (checkRectY - (margin.top * 2)) - textHeight);
+  svg.append('text').text(`Automation Iterations`).attr('font-size', '0.8em').attr('text-anchor', 'end').attr('alignment-baseline', 'baseline').attr('x', autoRectWidth + margin.left).attr('y', (autoRectY - (margin.top * 2)) - textHeight);
+  svg.append('text').text(`Catch Up Iterations`).attr('font-size', '0.8em').attr('text-anchor', 'end').attr('alignment-baseline', 'baseline').attr('x', autoRectWidth + margin.left).attr('y', (catchUpRectY - (margin.top * 2)) - textHeight);
+</script>
